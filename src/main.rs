@@ -129,12 +129,15 @@ fn main() {
 
     if is_lookup {
         let command = &query[0];
-        let inspection = inspector::inspect_command(command, options);
+        let inspection = inspector::inspect_command(command, options.clone());
 
         if json {
             render::render_json(&inspection);
         } else {
             render::render_lookup(&inspection);
+            if std::io::stdout().is_terminal() {
+                repl::run(&command, &inspection, &options);
+            }
         }
 
         std::process::exit(if inspection.found() || inspection.has_docs() {
