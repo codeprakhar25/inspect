@@ -15,6 +15,7 @@
 mod curated;
 mod inspector;
 mod render;
+mod repl;
 mod sources;
 
 use std::io::IsTerminal;
