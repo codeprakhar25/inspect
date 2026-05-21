@@ -36,7 +36,7 @@ impl Config {
         }
     }
 
-    fn generate_endpoint(&self) -> String {
+    pub fn generate_endpoint(&self) -> String {
         let trimmed = self.base_url.trim_end_matches('/');
         if trimmed.ends_with("/api/generate") {
             trimmed.to_string()

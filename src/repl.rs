@@ -55,7 +55,42 @@ fn build_prompt(system_ctx: &str, history: &[(String, String)], question: &str) 
 }
 
 fn stream_answer(prompt: &str, model: &str, endpoint: &str) -> Result<String, String> {
-    todo!()
+    use std::io::BufRead;
+
+    let body = serde_json::json!({
+        "model": model,
+        "prompt": prompt,
+        "stream": true,
+        "options": { "temperature": 0.3 }
+    });
+
+    let response = ureq::post(endpoint)
+        .set("Content-Type", "application/json")
+        .send_json(&body)
+        .map_err(|e| e.to_string())?;
+
+    let reader = std::io::BufReader::new(response.into_reader());
+    let mut full = String::new();
+
+    for line in reader.lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        if line.is_empty() {
+            continue;
+        }
+        let chunk: serde_json::Value =
+            serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        if let Some(token) = chunk["response"].as_str() {
+            print!("{token}");
+            std::io::stdout().flush().ok();
+            full.push_str(token);
+        }
+        if chunk["done"].as_bool().unwrap_or(false) {
+            break;
+        }
+    }
+
+    println!();
+    Ok(full)
 }
 
 #[cfg(test)]
