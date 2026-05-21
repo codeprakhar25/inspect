@@ -11,8 +11,60 @@ use crate::sources::ollama::Config as OllamaConfig;
 
 const SEP: &str = "──────────────────────────────────────";
 
-pub fn run(_cmd: &str, _inspection: &CommandInspection, _options: &InspectOptions) {
-    // TODO: implement
+pub fn run(cmd: &str, inspection: &CommandInspection, options: &InspectOptions) {
+    let config = OllamaConfig::from_options(
+        options.llm_model.as_deref(),
+        options.llm_url.as_deref(),
+    );
+    let endpoint = config.generate_endpoint();
+
+    let system_ctx = build_context(cmd, inspection);
+    let mut history: Vec<(String, String)> = Vec::new();
+
+    let mut rl = match DefaultEditor::new() {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    println!();
+
+    loop {
+        let prompt_str = format!("  {} ", "ask anything (enter to exit):".dimmed());
+        let line = match rl.readline(&prompt_str) {
+            Ok(l) => l,
+            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
+            Err(_) => break,
+        };
+
+        let question = line.trim().to_string();
+        if question.is_empty() {
+            break;
+        }
+
+        let _ = rl.add_history_entry(&question);
+
+        let full_prompt = build_prompt(&system_ctx, &history, &question);
+
+        println!();
+        match stream_answer(&full_prompt, &config.model, &endpoint) {
+            Ok(answer) => {
+                history.push((question, answer));
+            }
+            Err(_) if history.is_empty() => {
+                println!(
+                    "  {}",
+                    "no LLM configured — start Ollama to ask questions".dimmed()
+                );
+                break;
+            }
+            Err(e) => {
+                println!("  {}", format!("error: {e}").red());
+            }
+        }
+        println!();
+    }
+
+    println!("{}", SEP.dimmed());
 }
 
 fn build_context(cmd: &str, inspection: &CommandInspection) -> String {
