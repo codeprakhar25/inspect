@@ -93,6 +93,14 @@ $ inspect tar
 
 ## Install
 
+### One-liner (Linux & macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/codeprakhar25/inspect/main/install.sh | sh
+```
+
+Installs to `~/.local/bin/inspect`. Supports Linux x86_64/arm64 and macOS x86_64/arm64.
+
 ### From source (requires [Rust](https://rustup.rs))
 
 ```bash
