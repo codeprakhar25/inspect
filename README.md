@@ -1,6 +1,19 @@
-# inspect
+<div align="center">
 
-Understand any shell command without leaving your terminal.
+# 🔍 inspect
+
+**Understand any shell command without leaving your terminal.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
+[![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue?logo=linux)](https://github.com/codeprakhar25/inspect)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/codeprakhar25/inspect/pulls)
+
+</div>
+
+---
+
+You're mid-workflow. You half-remember what `-rn` does in `cp`. You could Google it, wade through man pages, or just... ask.
 
 ```
 $ inspect cp -rn src/ dest/
@@ -14,154 +27,187 @@ $ inspect cp -rn src/ dest/
 ──────────────────────────────────────
 ```
 
+No browser. No context switch. Back to work in 3 seconds.
+
 ---
 
-## What it does
+## Features
 
-`inspect` has two modes:
+- **Invocation explain** — paste any command, get a plain-English breakdown of every flag
+- **Command lookup** — full docs: summary, usage, flags, examples, risk warnings
+- **Interactive Q&A** — ask follow-up questions after lookup, powered by local LLM (Ollama)
+- **Shell widget** — press `Ctrl+]` on any half-typed command to explain it inline
+- **Git-aware** — understands `git commit`, `git push --force-with-lease`, etc. as subcommands
+- **Works offline** — curated knowledge base + man pages + `--help`, no network needed
+- **LLM enrichment** — local Ollama integration for obscure commands and cached responses
 
-**Lookup** — show docs for a command
+---
 
-```bash
-inspect git
-inspect rsync
-inspect tar
-```
-
-**Explain an invocation** — break down exactly what the flags you typed do
-
-```bash
-inspect cp -rn src/ dest/
-inspect git push --force-with-lease origin main
-inspect tar -xzf archive.tar.gz -C /tmp
-```
-
-After lookup, an interactive prompt lets you ask follow-up questions (requires [Ollama](#llm-enrichment)):
+## Demo
 
 ```
-  ask anything (enter to exit): when would I use -n instead of -i?
-  -n skips the file entirely without prompting. Use it in scripts where you
-  want idempotent copies. Use -i when you want interactive confirmation.
+$ inspect git push --force-with-lease origin main
+──────────────────────────────────────
+ Command: git push --force-with-lease origin main
+
+  --force-with-lease  force push only if nobody else has pushed (safer than --force)
+  origin              the remote to push to
+  main                the branch to push
+
+ Net effect: rewrites remote history safely — aborts if someone else pushed since your last fetch.
+
+ RISKS:
+  caution    Still rewrites history. Coordinate with your team first.
+──────────────────────────────────────
+```
+
+```
+$ inspect tar
+──────────────────────────────────────
+ tar — store and extract files from an archive
+
+ USAGE: tar [OPTION...] [FILE]...
+
+ EXAMPLES:
+  tar -czf archive.tar.gz dir/     create compressed archive
+  tar -xzf archive.tar.gz          extract compressed archive
+  tar -tzf archive.tar.gz          list contents without extracting
+
+ IMPORTANT FLAGS:
+  -c, --create     create a new archive
+  -x, --extract    extract files from an archive
+  -z, --gzip       filter through gzip
+  -f, --file       use archive file
+  -v, --verbose    list files processed
+  ...
+──────────────────────────────────────
+
+  ask anything (enter to exit): what's the difference between -z and -j?
+  -z uses gzip compression (.tar.gz), -j uses bzip2 (.tar.bz2). bzip2 compresses
+  better but is slower. For most uses, gzip is fine.
 ```
 
 ---
 
 ## Install
 
-### From source (requires Rust)
+### From source (requires [Rust](https://rustup.rs))
 
 ```bash
 git clone https://github.com/codeprakhar25/inspect.git
 cd inspect
 cargo build --release
-```
 
-Copy the binary somewhere on your PATH:
-
-```bash
+# Put on PATH (pick one)
 cp target/release/inspect ~/.local/bin/
-# or
 sudo cp target/release/inspect /usr/local/bin/
 ```
 
 ---
 
-## Shell widget (Ctrl+])
+## Shell widget — Ctrl+]
 
-The real power: press **Ctrl+]** while typing any command to explain it inline — without losing your current prompt.
+The best part. Press **Ctrl+]** on any command you're typing to explain it inline — without losing your prompt.
 
 ```bash
-# Install the widget (run once)
 inspect --install-shell bash   # or zsh
-
-# Reload your shell
-source ~/.bashrc   # or ~/.zshrc
+source ~/.bashrc               # reload
 ```
 
-Now type any command at your prompt and press **Ctrl+]**:
+Type something, press Ctrl+]:
 
 ```
-$ rsync -avz --progress src/ dest/    ← press Ctrl+]
+$ rsync -avz --progress src/ dest/     ← press Ctrl+]
 
   -a  archive mode (preserves permissions, timestamps, symlinks)
   -v  verbose
   -z  compress during transfer
   --progress  show per-file progress bar
 
-$ rsync -avz --progress src/ dest/    ← cursor returned here
+$ rsync -avz --progress src/ dest/     ← cursor back, unchanged
 ```
 
 ---
 
-## LLM enrichment
+## LLM enrichment (optional)
 
-`inspect` uses a locally-running [Ollama](https://ollama.com) instance to enrich docs for obscure commands and power the interactive Q&A prompt.
+Install [Ollama](https://ollama.com), pull a model, and `inspect` will enrich docs and power the interactive Q&A prompt:
 
 ```bash
-# Install Ollama, then pull a model
 ollama pull llama3.2
 
-# Use LLM enrichment
 inspect --llm some-obscure-tool
-
-# Custom model or URL
-inspect --llm --llm-model qwen2.5 --llm-url http://localhost:11434 curl
+inspect --llm --llm-model qwen2.5 curl
 ```
 
-LLM responses are cached under `~/.cache/inspect-cli/ollama/` so repeated lookups are instant.
+Responses cache at `~/.cache/inspect-cli/ollama/` — repeated lookups are instant.
 
-Without Ollama, `inspect` works fully for all well-known commands using man pages, `--help` output, and a built-in curated knowledge base.
+Without Ollama, `inspect` works fine using man pages, `--help`, and the built-in curated database.
+
+**Environment variables:**
+
+| Variable | Default |
+|---|---|
+| `INSPECT_OLLAMA_MODEL` | `llama3.2` |
+| `INSPECT_OLLAMA_URL` | `http://127.0.0.1:11434` |
 
 ---
 
-## Usage
+## All options
 
 ```
 inspect [OPTIONS] <command>
 inspect [OPTIONS] <command> [flags...] [args...]
+
+MODES:
+    inspect cp                     lookup: show docs for 'cp'
+    inspect cp -rn src/ dest/      explain: resolve each flag in the invocation
+    inspect git commit -m "fix"    explain git subcommands
 
 OPTIONS:
     --json                emit machine-readable JSON
     --allow-help          run <command> --help even for unknown commands
     --no-help             skip all <command> --help execution
     --llm                 enrich output via local Ollama instance
-    --llm-model MODEL     Ollama model (default: llama3.2)
-    --llm-url URL         Ollama base URL (default: http://127.0.0.1:11434)
+    --llm-model MODEL     Ollama model (default: env INSPECT_OLLAMA_MODEL or llama3.2)
+    --llm-url URL         Ollama base URL (default: env INSPECT_OLLAMA_URL or http://127.0.0.1:11434)
     -v, --verbose         show source/fallback warnings
-    --install-shell SHELL append shell widget to ~/.bashrc or ~/.zshrc
+    --install-shell SHELL append shell widget to ~/.bashrc or ~/.zshrc (bash or zsh)
     -h, --help            show this help
     -V, --version         print version
 ```
 
 ---
 
-## How it works
+## How docs are assembled
 
-Documentation is assembled from multiple sources in priority order:
+Sources are tried in priority order:
 
-1. **Curated knowledge base** — hand-written entries for 40+ common commands (`cp`, `git`, `rsync`, `tar`, `find`, `curl`, …)
-2. **`man` pages** — parsed and cleaned (strips groff formatting, encoding artifacts)
-3. **`--help` output** — flag and usage extraction via regex
-4. **Ollama LLM** — enrichment and Q&A for everything else (optional, cached)
-
-For git-style subcommands (`git commit`, `git push`), each subcommand is looked up and explained individually.
+| Priority | Source | Notes |
+|---|---|---|
+| 1 | Curated knowledge base | Hand-written entries for 40+ common commands |
+| 2 | `man` pages | Parsed and cleaned — strips groff, encoding artifacts |
+| 3 | `--help` output | Flag and usage extraction |
+| 4 | Ollama LLM | For obscure commands; cached locally |
 
 ---
 
 ## Contributing
 
-Contributions welcome. The most impactful thing you can add is curated entries for commands you use daily — they give cleaner output than raw man pages.
+Contributions welcome — especially curated entries. A curated entry gives cleaner output than any man page and takes ~10 minutes to write.
 
-Curated entries live in [`src/curated.rs`](src/curated.rs). Each entry is a Rust struct with a summary, usage, flags, examples, and risk notes. Existing entries are the best reference for format.
+Entries live in [`src/curated.rs`](src/curated.rs). Existing entries are the best format reference.
 
 ```bash
-cargo test        # run the test suite
-cargo clippy      # lint
-cargo fmt         # format
+cargo test      # run tests
+cargo clippy    # lint
+cargo fmt       # format
 ```
+
+Open an issue first for anything beyond a curated entry addition or bug fix.
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
