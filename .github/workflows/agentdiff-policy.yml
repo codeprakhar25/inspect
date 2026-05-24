@@ -1,0 +1,42 @@
+name: AgentDiff Policy Check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch agentdiff refs
+        run: |
+          git fetch origin '+refs/agentdiff/*:refs/agentdiff/*' || true
+
+      - name: Check out PR head branch
+        run: |
+          git checkout -B "${{ github.head_ref }}" "${{ github.event.pull_request.head.sha }}"
+
+      - name: Install agentdiff
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/codeprakhar25/agentdiff/main/install.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Check policy
+        run: |
+          agentdiff policy check --format github-annotations
+
+      - name: Post attribution comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          agentdiff report --format markdown --post-pr-comment "$PR" || true
