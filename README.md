@@ -8,6 +8,7 @@
 [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange?logo=rust)](https://www.rust-lang.org/)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue?logo=linux)](https://github.com/codeprakhar25/inspect)
 [![Platform: macOS](https://img.shields.io/badge/Platform-macOS-lightgrey?logo=apple)](https://github.com/codeprakhar25/inspect)
+[![Platform: WSL](https://img.shields.io/badge/Platform-WSL-4D2AFF?logo=windows)](https://github.com/codeprakhar25/inspect)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/codeprakhar25/inspect/pulls)
 
 [![asciicast](https://asciinema.org/a/acFWWlMKeCvpdGjN.svg)](https://asciinema.org/a/acFWWlMKeCvpdGjN)
