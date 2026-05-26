@@ -22,6 +22,7 @@ use std::io::IsTerminal;
 use std::path::PathBuf;
 
 use inspector::InspectOptions;
+use sources::ollama;
 
 fn main() {
     // ── Manual arg parsing ───────────────────────────────────────────────────
@@ -39,6 +40,8 @@ fn main() {
     let mut llm_model: Option<String> = None;
     let mut llm_url: Option<String> = None;
     let mut install_shell: Option<String> = None;
+    let mut find_intent: Option<String> = None;
+    let mut explore = false;
     let mut query: Vec<String> = Vec::new();
 
     let mut i = 0;
@@ -82,6 +85,16 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+            "--find" => {
+                i += 1;
+                if i < raw.len() {
+                    find_intent = Some(raw[i].clone());
+                } else {
+                    eprintln!("inspect: --find requires a description string");
+                    std::process::exit(1);
+                }
+            }
+            "--explore" => explore = true,
             "--help" | "-h" => {
                 print_help();
                 return;
@@ -108,6 +121,19 @@ fn main() {
 
     colored::control::set_override(std::io::stdout().is_terminal() && !json);
 
+    // ── --find mode ───────────────────────────────────────────────────────────
+    if let Some(intent) = find_intent {
+        let config = ollama::Config::from_options(llm_model.as_deref(), llm_url.as_deref());
+        match ollama::find_commands(&intent, &config) {
+            Ok(suggestions) => render::render_find(&intent, &suggestions),
+            Err(e) => {
+                eprintln!("inspect: --find requires Ollama: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     if query.is_empty() {
         eprintln!("Usage: inspect <command> [flags...] [args...]");
         std::process::exit(1);
@@ -129,6 +155,39 @@ fn main() {
 
     if is_lookup {
         let command = &query[0];
+
+        if explore {
+            let inspection = inspector::inspect_command(command, options.clone());
+            let flags_text: String = inspection
+                .flags
+                .iter()
+                .map(|f| format!("{}: {}", f.names, f.description))
+                .collect::<Vec<_>>()
+                .join("; ");
+            let config = ollama::Config::from_options(
+                options.llm_model.as_deref(),
+                options.llm_url.as_deref(),
+            );
+            match ollama::explore_command(
+                command,
+                inspection.summary.as_deref(),
+                &flags_text,
+                &config,
+            ) {
+                Ok(use_cases) => {
+                    render::render_explore(command, inspection.summary.as_deref(), &use_cases)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "inspect: --explore requires Ollama ({}), showing standard lookup",
+                        e
+                    );
+                    render::render_lookup(&inspection);
+                }
+            }
+            std::process::exit(0);
+        }
+
         let inspection = inspector::inspect_command(command, options.clone());
 
         if json {
@@ -136,7 +195,7 @@ fn main() {
         } else {
             render::render_lookup(&inspection);
             if std::io::stdout().is_terminal() {
-                repl::run(&command, &inspection, &options);
+                repl::run(command, &inspection, &options);
             }
         }
 
@@ -167,11 +226,15 @@ fn print_help() {
 USAGE:
     inspect [OPTIONS] <command>
     inspect [OPTIONS] <command> [flags...] [args...]
+    inspect --find <description>
+    inspect --explore <command>
 
 MODES:
     inspect cp                     lookup: show docs for 'cp'
     inspect cp -rn src/ dest/      explain: resolve each flag in the invocation
     inspect git commit -m \"fix\"    explain git subcommands
+    inspect --find \"archive files\" reverse lookup: suggest commands for intent
+    inspect --explore tar          explore: group tar's capabilities by use case
 
 OPTIONS:
     --json                emit machine-readable JSON
@@ -180,6 +243,8 @@ OPTIONS:
     --llm                 enrich output via local Ollama instance
     --llm-model MODEL     Ollama model (default: env INSPECT_OLLAMA_MODEL or llama3.2)
     --llm-url URL         Ollama base URL (default: env INSPECT_OLLAMA_URL or http://127.0.0.1:11434)
+    --find DESCRIPTION    suggest commands that accomplish DESCRIPTION (uses Ollama)
+    --explore             group the command's capabilities by practical use case (uses Ollama)
     -v, --verbose         show source/fallback warnings
     --install-shell SHELL append shell widget to ~/.bashrc or ~/.zshrc
     -h, --help            show this help

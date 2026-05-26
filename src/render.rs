@@ -3,6 +3,7 @@
 use colored::Colorize;
 
 use crate::inspector::{CommandIdentity, CommandInspection, CommandKind, InvocationAnalysis};
+use crate::sources::ollama;
 use crate::sources::{RiskLevel, RiskNote};
 
 const SEP: &str = "──────────────────────────────────────";
@@ -219,6 +220,43 @@ fn truncate(s: &str, max: usize) -> String {
         let cut: String = collapsed.chars().take(max - 1).collect();
         format!("{cut}…")
     }
+}
+
+/// Render the results of `--find <intent>` (reverse lookup).
+pub fn render_find(intent: &str, suggestions: &[ollama::CommandSuggestion]) {
+    let sep = SEP.dimmed();
+    println!("{sep}");
+    println!(" Commands for: \"{}\"", intent.white());
+    println!();
+    for s in suggestions {
+        println!("  {}", s.command.cyan().bold());
+        println!("    {}", s.description.white());
+        if let Some(example) = &s.example {
+            println!("    {}", example.green());
+        }
+        println!();
+    }
+    println!("{sep}");
+}
+
+/// Render the results of `--explore <cmd>` (capability groups).
+pub fn render_explore(cmd: &str, summary: Option<&str>, use_cases: &[ollama::UseCase]) {
+    let sep = SEP.dimmed();
+    println!("{sep}");
+    match summary {
+        Some(s) => println!(" {} — {}", cmd.cyan().bold(), s.white()),
+        None => println!(" {}", cmd.cyan().bold()),
+    }
+    println!();
+    for uc in use_cases {
+        println!(" {}", uc.title.to_uppercase().white().bold());
+        println!("   {}", uc.description.dimmed());
+        for example in &uc.examples {
+            println!("   {}", format!("$ {example}").green());
+        }
+        println!();
+    }
+    println!("{sep}");
 }
 
 /// Print a friendly error when a command's docs cannot be found.
