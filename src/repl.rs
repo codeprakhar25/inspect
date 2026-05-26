@@ -12,10 +12,8 @@ use crate::sources::ollama::Config as OllamaConfig;
 const SEP: &str = "──────────────────────────────────────";
 
 pub fn run(cmd: &str, inspection: &CommandInspection, options: &InspectOptions) {
-    let config = OllamaConfig::from_options(
-        options.llm_model.as_deref(),
-        options.llm_url.as_deref(),
-    );
+    let config =
+        OllamaConfig::from_options(options.llm_model.as_deref(), options.llm_url.as_deref());
     let endpoint = config.generate_endpoint();
 
     let system_ctx = build_context(cmd, inspection);
@@ -129,8 +127,7 @@ fn stream_answer(prompt: &str, model: &str, endpoint: &str) -> Result<String, St
         if line.is_empty() {
             continue;
         }
-        let chunk: serde_json::Value =
-            serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        let chunk: serde_json::Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
         if let Some(token) = chunk["response"].as_str() {
             print!("{token}");
             std::io::stdout().flush().ok();
