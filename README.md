@@ -39,6 +39,8 @@ No browser. No context switch. Back to work in 3 seconds.
 
 - **Invocation explain** — paste any command, get a plain-English breakdown of every flag
 - **Command lookup** — full docs: summary, usage, flags, examples, risk warnings
+- **Reverse lookup** — describe a task and get direct command suggestions via local Ollama
+- **Capability explorer** — group a command's practical workflows by use case
 - **Interactive Q&A** — ask follow-up questions after lookup, powered by local LLM (Ollama)
 - **Shell widget** — press `Ctrl+]` on any half-typed command to explain it inline
 - **Git-aware** — understands `git commit`, `git push --force-with-lease`, etc. as subcommands
@@ -91,6 +93,34 @@ $ inspect tar
   better but is slower. For most uses, gzip is fine.
 ```
 
+```
+$ inspect --find "compress a directory into a tarball"
+──────────────────────────────────────
+ Commands for: "compress a directory into a tarball"
+
+  tar
+    create a tarball of the specified directory
+    tar -czf archive.tar.gz /path/to/directory
+──────────────────────────────────────
+```
+
+```
+$ inspect --explore tar
+──────────────────────────────────────
+ tar — an archiving utility
+
+ ARCHIVE FILES
+   Create a new archive or extract files from an existing one
+   $ tar -czf archive.tar.gz dir/
+   $ tar -xzf backup.tar.gz
+
+ COMPRESS WITH GZIP
+   Filter archive through gzip for compression
+   $ tar -czf archive.tar.gz dir/
+   $ tar -xzvf archive.tar.gz
+──────────────────────────────────────
+```
+
 ---
 
 ## Install
@@ -113,6 +143,14 @@ cargo build --release
 # Put on PATH (pick one)
 cp target/release/inspect ~/.local/bin/
 sudo cp target/release/inspect /usr/local/bin/
+```
+
+To update an existing source checkout:
+
+```bash
+git pull
+cargo build --release
+hash -r   # bash: clear any cached inspect path
 ```
 
 ---
@@ -141,18 +179,20 @@ $ rsync -avz --progress src/ dest/     ← cursor back, unchanged
 
 ---
 
-## LLM enrichment (optional)
+## LLM modes (optional)
 
-Install [Ollama](https://ollama.com), pull a model, and `inspect` will enrich docs and power the interactive Q&A prompt:
+Install [Ollama](https://ollama.com), pull a model, and `inspect` can enrich docs, power the interactive Q&A prompt, suggest commands from intent, and explore command capabilities:
 
 ```bash
 ollama pull llama3.2
 
 inspect --llm some-obscure-tool
 inspect --llm --llm-model qwen2.5 curl
+inspect --find "find files modified in the last 7 days"
+inspect --explore tar
 ```
 
-Responses cache at `~/.cache/inspect-cli/ollama/` — repeated lookups are instant.
+The first request can be slow while Ollama loads the model. Responses cache under `~/.cache/inspect-cli/` — repeated lookups are instant.
 
 Without Ollama, `inspect` works fine using man pages, `--help`, and the built-in curated database.
 
@@ -170,11 +210,15 @@ Without Ollama, `inspect` works fine using man pages, `--help`, and the built-in
 ```
 inspect [OPTIONS] <command>
 inspect [OPTIONS] <command> [flags...] [args...]
+inspect --find <description>
+inspect --explore <command>
 
 MODES:
     inspect cp                     lookup: show docs for 'cp'
     inspect cp -rn src/ dest/      explain: resolve each flag in the invocation
     inspect git commit -m "fix"    explain git subcommands
+    inspect --find "archive files" reverse lookup: suggest commands for intent
+    inspect --explore tar          explore: group tar's capabilities by use case
 
 OPTIONS:
     --json                emit machine-readable JSON
@@ -183,6 +227,8 @@ OPTIONS:
     --llm                 enrich output via local Ollama instance
     --llm-model MODEL     Ollama model (default: env INSPECT_OLLAMA_MODEL or llama3.2)
     --llm-url URL         Ollama base URL (default: env INSPECT_OLLAMA_URL or http://127.0.0.1:11434)
+    --find DESCRIPTION    suggest commands that accomplish DESCRIPTION (uses Ollama)
+    --explore             group the command's capabilities by practical use case (uses Ollama)
     -v, --verbose         show source/fallback warnings
     --install-shell SHELL append shell widget to ~/.bashrc or ~/.zshrc (bash or zsh)
     -h, --help            show this help
@@ -200,7 +246,7 @@ Sources are tried in priority order:
 | 1 | Curated knowledge base | Hand-written entries for 40+ common commands |
 | 2 | `man` pages | Parsed and cleaned — strips groff, encoding artifacts |
 | 3 | `--help` output | Flag and usage extraction |
-| 4 | Ollama LLM | For obscure commands; cached locally |
+| 4 | Ollama LLM | `--llm`, `--find`, and `--explore`; cached locally |
 
 ---
 
