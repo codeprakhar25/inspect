@@ -11,7 +11,7 @@
 [![Platform: WSL](https://img.shields.io/badge/Platform-WSL-4D2AFF?logo=windows)](https://github.com/codeprakhar25/inspect)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/codeprakhar25/inspect/pulls)
 
-[![asciicast](https://asciinema.org/a/acFWWlMKeCvpdGjN.svg)](https://asciinema.org/a/acFWWlMKeCvpdGjN)
+![inspect demo](demo.gif)
 
 </div>
 
